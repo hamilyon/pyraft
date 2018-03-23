@@ -1,26 +1,30 @@
 # -*- coding: utf-8 -*-
 from models import AckMessage, ElectionVoteMessage
 
-class Action(object):
-    pass
+
+class Action(object):  # zeroMq specific
+    def send(self, socket, message):
+        socket.send(message)
+
 
 class Ack(Action):
 
-    def __init__(self, commitIndex, messageId, term):
+    def __init__(self, commitIndex, term, reply_to):
         self.ackMessage = True
-        self.messageId = messageId
-        self.commitIndex = commitIndex #?
+        self.commitIndex = commitIndex  # ?
         self.term = term
+        self.reply_to = reply_to
 
     def perform(self, socket, state):
-        socket.send(AckMessage(self.commitIndex, self.messageId, self.term))
+        self.send(socket, AckMessage(self.commitIndex, self.messageId, self.term, self.reply_to))
 
 
-#election vote
+# election vote
 class ElectionVote(Action):
-    def __init__(self, term, name):
+    def __init__(self, term, name, reply_to):
         self.term = term
         self.name = name
+        self.reply_to = reply_to
 
     def perform(self, socket, state):
-        socket.send(ElectionVoteMessage(self.term, self.name))
+        self.send(socket, ElectionVoteMessage(self.term, self.name, self.reply_to))

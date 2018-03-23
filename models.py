@@ -3,23 +3,28 @@
 class Message(object):
     pass
 
+
 class AckMessage(Message):
-    def __init__(self, commitIndex, messageId, term):
+    def __init__(self, commitIndex, messageId, term, reply_to):
         self.ackMessage = True
         self.messageId = messageId
-        self.commitIndex = commitIndex #?
+        self.commitIndex = commitIndex  # ?
         self.term = term
         self.success = True
+        self.reply_to = reply_to
+
 
 class NackMessage(Message):
-    def __init__(self, commitIndex, messageId, term):
+    def __init__(self, commitIndex, messageId, term, reply_to):
         self.ackMessage = True
         self.messageId = messageId
-        self.commitIndex = commitIndex #?
+        self.commitIndex = commitIndex  # ?
         self.term = term
         self.success = False
+        self.reply_to = reply_to
 
-#log update
+
+# log update
 class UpdateMessage(object):
     def __init__(self, term, prevLogIndex, prevLogTerm, entries, leaderCommit):
         self.update = True
@@ -29,7 +34,8 @@ class UpdateMessage(object):
         self.entries = entries
         self.leaderCommit = leaderCommit
 
-#election start
+
+# election start
 class RequestVoteMessage(object):
     def __init__(self, term, name, lastLogIndex, lastLogTerm):
         self.election_start = True
@@ -38,10 +44,12 @@ class RequestVoteMessage(object):
         self.lastLogIndex = lastLogIndex
         self.lastLogTerm = lastLogTerm
 
-#election vote
+
+# election vote
 class ElectionVoteMessage(object):
-    def __init__(self, term, name):
+    def __init__(self, term, name, reply_to):
         self.election_vote = True
         self.term = term
         self.name = name
         self.voteGranted = True
+        self.reply_to = reply_to
