@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import sys
 
+import pickle
+
 import yaml
 import zmq
 
@@ -22,10 +24,10 @@ class RaftState(object):
         self.lastApplied = 0
         self.name = name
         # leader stuff
-        self.serverStates = {}  # name -> ServerState
+        self.serverStates = {}  # name -> RemoteServerState
 
 
-class ServerState(object):
+class RemoteServerState(object):
     def __init__(self, name):
         self.name = name
         self.nextIndex = 0
@@ -38,11 +40,20 @@ class Command(object):
         self.term = term
 
 
-class RaftServer(object):
-    def __init__(self, name, state=None):
+class RaftPeer(object):
+    def __init__(self, server_name, config, state=None):
+        self.config = config
         if not state:
-            state = RaftState(name)
+            state = RaftState(server_name)
         self.state = state
+        self.sockets = {}
+        for name in config['servers']:
+            server_netloc = config['servers'][name]
+            if name != server_name:
+                print("Connecting to " + name + " server " + server_netloc)
+                socket = zeromq_context.context.socket(zmq.REQ)
+                socket.connect("tcp://" + server_netloc)
+                self.sockets['name'] = socket
 
     # возвращает список действий
     def receive(self, message):
@@ -65,6 +76,21 @@ class RaftServer(object):
         for action in actions:
             action.perform()
 
+    def run(self):
+        poller = zmq.Poller()
+        for socket in self.sockets:
+            poller.register(socket, zmq.POLLIN)
+
+        # Work on requests from both server and publisher
+        should_continue = True
+        while should_continue:
+            socks = dict(poller.poll())
+            for peer_socket in socks
+                if (socks[peer_socket] == zmq.POLLIN):
+                    message = peer_socket.recv()
+                    message = pickle.loads(message)
+                    print("Recieved command: %s" % message)
+                    self.act_upon(message)
 
 def pollerThreadRun():
     context = zeromq_context.context
@@ -77,9 +103,7 @@ def pollerThreadRun():
 
 
 def server(server_name, config, context):
-    for name in config['servers']:
-        server = config['servers'][name]
-        if name != server_name:
-            print("Connecting to " + name + " server …")
-            socket = context.socket(zmq.REQ)
-            socket.connect("tcp://" + server)
+    server_netloc = config['servers'][server_name]
+    raft_server = RaftPeer(server_name, config)
+
+
