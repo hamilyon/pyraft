@@ -1,5 +1,6 @@
 
 class StateUpdate(object):
+    """Действие - обновление состояния"""
     def __init__(self, log, commitIndex, lastApplied):
         self.log = log
         self.commitIndex = commitIndex

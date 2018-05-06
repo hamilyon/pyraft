@@ -40,20 +40,12 @@ class Command(object):
         self.term = term
 
 
-class RaftPeer(object):
-    def __init__(self, server_name, config, state=None):
-        self.config = config
+class Raft(object):
+    def __init__(self, server_name, state):
         if not state:
-            state = RaftState(server_name)
-        self.state = state
-        self.sockets = {}
-        for name in config['servers']:
-            server_netloc = config['servers'][name]
-            if name != server_name:
-                print("Connecting to " + name + " server " + server_netloc)
-                socket = zeromq_context.context.socket(zmq.REQ)
-                socket.connect("tcp://" + server_netloc)
-                self.sockets['name'] = socket
+            self.state = RaftState(server_name)
+        else:
+            self.state = state
 
     # возвращает список действий
     def receive(self, message):
@@ -85,25 +77,40 @@ class RaftPeer(object):
         should_continue = True
         while should_continue:
             socks = dict(poller.poll())
-            for peer_socket in socks
+            for peer_socket in socks:
                 if (socks[peer_socket] == zmq.POLLIN):
                     message = peer_socket.recv()
                     message = pickle.loads(message)
                     print("Recieved command: %s" % message)
                     self.act_upon(message)
 
-def pollerThreadRun():
+
+class RaftPeer(Raft):
+    def __init__(self, server_name, config, context, state=None):
+        super().__init__(server_name, state)
+        self.config = config
+        self.sockets = {}
+        for name in config['servers']:
+            server_netloc = config['servers'][name]
+            if name != server_name:
+                print("Connecting to " + name + " server " + server_netloc)
+                socket = context.context.socket(zmq.REQ)
+                socket.connect("tcp://" + server_netloc)
+                self.sockets['name'] = socket
+        self.context = context
+
+def run_peer():
     context = zeromq_context.context
     server_name = sys.argv[1]
 
     with open("servers.yaml", 'r') as stream:
         config = yaml.load(stream)
 
-    server(server_name, config, context)
+    peer(server_name, config, context)
 
 
-def server(server_name, config, context):
+def peer(server_name, config, context):
     server_netloc = config['servers'][server_name]
-    raft_server = RaftPeer(server_name, config)
+    raft_server = RaftPeer(server_name, config, context)
 
 

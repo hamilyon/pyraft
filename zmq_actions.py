@@ -3,12 +3,14 @@ from models import AckMessage, ElectionVoteMessage
 
 
 class Action(object):  # zeroMq specific
+    """базовый класс для zmq действий"""
+
     def send(self, socket, message):
         socket.send(message)
 
 
 class Ack(Action):
-
+    """Действие - подтверждение"""
     def __init__(self, commitIndex, term, reply_to):
         self.ackMessage = True
         self.commitIndex = commitIndex  # ?
@@ -21,6 +23,7 @@ class Ack(Action):
 
 # election vote
 class ElectionVote(Action):
+    """Действие - голос 'за'"""
     def __init__(self, term, name, reply_to):
         self.term = term
         self.name = name
