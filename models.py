@@ -4,22 +4,18 @@ class Message(object):
 
 
 class AckMessage(Message):
-    def __init__(self,
-                 # commitIndex,
-                 messageId, term, reply_to):
+    def __init__(self, messageId, term, reply_to):
         self.ackMessage = True
         self.messageId = messageId
-        # self.commitIndex = commitIndex  # ?
-        # self.term = term
+        self.term = term
         self.success = True
         self.reply_to = reply_to
 
 
 class NackMessage(Message):
-    def __init__(self, commitIndex, messageId, term, reply_to):
+    def __init__(self, messageId, term, reply_to):
         self.ackMessage = True
         self.messageId = messageId
-        self.commitIndex = commitIndex  # ?
         self.term = term
         self.success = False
         self.reply_to = reply_to

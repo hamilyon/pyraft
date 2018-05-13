@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
+
+"""
+Основные структуры данных и чистые функции, реализующие raft (https://raft.github.io/raft.pdf)
+ввод-вывод, запись состояния на диск и даже просто изменение состояния должны быть реализованы где-то ещё
+"""
 
 import pickle
+import sys
 
 import yaml
 import zmq
@@ -56,7 +61,7 @@ class Raft(object):
         else:
             self.state = state
 
-    # возвращает список действий
+    # returns list of actions
     def receive(self, message):
         term = message.term
         #update term
@@ -68,25 +73,33 @@ class Raft(object):
         if message.update:
             newServerRole = None
             if self.state.term > term:
-                return Nack(self.state.commitIndex, self.state.term, message)
+                return [Nack(self.state.term, message)] #no state update
             elif self.state.serverRole != 'follower':
                 newServerRole = 'follower'
             actions = [
                 Ack(message.term, message),
-                StateUpdate(message.entries, message.leaderCommit, newServerRole)
+                StateUpdate(message.entries, message.leaderCommit, newServerRole, newTerm)
             ]
         if message.requestVote:
-            try:
-                if self.state.log[message.lastLogIndex].term <= message.lastLogTerm:
-                    actions = [] #no vote
-            except IndexError:
-                return [
-                    ElectionVote(message.term, self.state.name, message),
-                    StateUpdate()
-                ]
-        pass
+            if message.term > self.state.term:
+                try:
+                    if message.lastLogIndex == -1 and message.lastLogTerm == -1 and not self.state.log:
+                        # log is empty, vote
+                        actions = self.vote(message, newTerm)
+                    elif self.state.log[message.lastLogIndex].term >= message.lastLogTerm:
+                        actions = self.vote(message, newTerm)
+                    else:
+                        actions = [] #no vote
+                except IndexError:
+                    actions = self.vote(message, newTerm)  # ok, candidate's log is longer
 
         return actions
+
+    def vote(self, message, newTerm):
+        return [
+            ElectionVote(message.term, message.name, message),
+            StateUpdate(term=newTerm, votedFor=message.name)
+        ]
 
     def act_upon(self, message):
         actions = self.receive(message)

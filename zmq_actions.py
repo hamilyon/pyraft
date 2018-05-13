@@ -20,27 +20,24 @@ class Action(object):  # zeroMq specific
 class Ack(Action):
     """Действие - подтверждение"""
     def __init__(self,
-                 # commitIndex,
                  term, reply_to):
         self.ackMessage = True
-        # self.commitIndex = commitIndex  # ?
         self.term = term
         self.reply_to = reply_to
 
     def perform(self, socket, state):
-        self.send(socket, AckMessage(self.commitIndex, self.reply_to.messageId, self.term, self.reply_to))
+        self.send(socket, AckMessage(self.reply_to.messageId, self.term, self.reply_to))
 
 
 class Nack(Action):
     """Действие - отказ"""
-    def __init__(self, commitIndex, term, reply_to):
+    def __init__(self, term, reply_to):
         self.ackMessage = True
-        self.commitIndex = commitIndex  # ?
         self.term = term
         self.reply_to = reply_to
 
     def perform(self, socket, state):
-        self.send(socket, NackMessage(self.commitIndex, self.reply_to.messageId, self.term, self.reply_to))
+        self.send(socket, NackMessage(self.reply_to.messageId, self.term, self.reply_to))
 
 
 # election vote
