@@ -26,13 +26,14 @@ class NackMessage(Message):
 
 # log update
 class UpdateMessage(object):
-    def __init__(self, term, prevLogIndex, prevLogTerm, entries, leaderCommit):
+    def __init__(self, term, prevLogIndex, prevLogTerm, entries, leaderCommit, fromLeader):
         self.update = True
         self.term = term
         self.prevLogIndex = prevLogIndex
         self.prevLogTerm = prevLogTerm
         self.entries = entries
         self.leaderCommit = leaderCommit
+        self.fromLeader = fromLeader
 
 
 # election start

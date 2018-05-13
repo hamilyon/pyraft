@@ -6,7 +6,6 @@ with open("servers.yaml", 'r') as stream:
     config = yaml.load(stream)
 
 
-
 def client(server_name):
     for name in config['servers']:
         server = config['servers'][name]

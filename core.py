@@ -8,13 +8,14 @@ import yaml
 import zmq
 
 import zeromq_context
-from zmq_actions import Ack
+from state_actions import StateUpdate
+from zmq_actions import Ack, Nack
 
 
 class RaftState(object):
     def __init__(self, name):
-        self.term = 0
-        # self.state = None
+        self.term = 0 # current term, increases monotonically
+        self.serverRole = 'follower' # 'leader', 'candidate', 'follower'
         # self.leader = None
         self.votedFor = None
         # self.priority = 1
@@ -41,7 +42,7 @@ class Command(object):
 
 
 class Raft(object):
-    def __init__(self, server_name, state):
+    def __init__(self, server_name, state=None):
         if not state:
             self.state = RaftState(server_name)
         else:
@@ -50,16 +51,22 @@ class Raft(object):
     # возвращает список действий
     def receive(self, message):
         term = message.term
+        #update term
+        if self.state.term < term:
+            self.state.term = term
         actions = []
         if message.update:
-            prev = message.prev
-            new = message.new
-            actions.extend([
+            if self.state.term > term:
+                return Nack(self.state.commitIndex, self.state.term, message)
+            elif self.state != 'follower':
+                self.state = 'follower'
+            actions = [
                 Ack(self.state.commitIndex, self.state.term, message),
-            ])
-        if message.election_start:
+                StateUpdate(message.entries, message.leaderCommit, )
+            ]
+        # if message.election_start:
             # vote
-            pass
+            # pass
 
         return actions
 
