@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-
 class Message(object):
     pass
 
 
 class AckMessage(Message):
-    def __init__(self, commitIndex, messageId, term, reply_to):
+    def __init__(self,
+                 # commitIndex,
+                 messageId, term, reply_to):
         self.ackMessage = True
         self.messageId = messageId
-        self.commitIndex = commitIndex  # ?
-        self.term = term
+        # self.commitIndex = commitIndex  # ?
+        # self.term = term
         self.success = True
         self.reply_to = reply_to
 
@@ -28,6 +29,7 @@ class NackMessage(Message):
 class UpdateMessage(object):
     def __init__(self, term, prevLogIndex, prevLogTerm, entries, leaderCommit, fromLeader):
         self.update = True
+        self.requestVote = False
         self.term = term
         self.prevLogIndex = prevLogIndex
         self.prevLogTerm = prevLogTerm
@@ -39,7 +41,8 @@ class UpdateMessage(object):
 # election start
 class RequestVoteMessage(object):
     def __init__(self, term, name, lastLogIndex, lastLogTerm):
-        self.election_start = True
+        self.update = False
+        self.requestVote = True
         self.term = term
         self.name = name
         self.lastLogIndex = lastLogIndex

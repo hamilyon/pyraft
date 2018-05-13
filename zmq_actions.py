@@ -8,12 +8,22 @@ class Action(object):  # zeroMq specific
     def send(self, socket, message):
         socket.send(message)
 
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.__dict__.items())))
+
 
 class Ack(Action):
     """Действие - подтверждение"""
-    def __init__(self, commitIndex, term, reply_to):
+    def __init__(self,
+                 # commitIndex,
+                 term, reply_to):
         self.ackMessage = True
-        self.commitIndex = commitIndex  # ?
+        # self.commitIndex = commitIndex  # ?
         self.term = term
         self.reply_to = reply_to
 

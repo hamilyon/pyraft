@@ -9,7 +9,7 @@ import zmq
 
 import zeromq_context
 from state_actions import StateUpdate
-from zmq_actions import Ack, Nack
+from zmq_actions import Ack, Nack, ElectionVote
 
 
 class RaftState(object):
@@ -40,6 +40,14 @@ class Command(object):
         self.command = command
         self.term = term
 
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.__dict__.items())))
+
 
 class Raft(object):
     def __init__(self, server_name, state=None):
@@ -52,21 +60,31 @@ class Raft(object):
     def receive(self, message):
         term = message.term
         #update term
+        newTerm = None
         if self.state.term < term:
-            self.state.term = term
+            newTerm = term
+
         actions = []
         if message.update:
+            newServerRole = None
             if self.state.term > term:
                 return Nack(self.state.commitIndex, self.state.term, message)
-            elif self.state != 'follower':
-                self.state = 'follower'
+            elif self.state.serverRole != 'follower':
+                newServerRole = 'follower'
             actions = [
-                Ack(self.state.commitIndex, self.state.term, message),
-                StateUpdate(message.entries, message.leaderCommit, )
+                Ack(message.term, message),
+                StateUpdate(message.entries, message.leaderCommit, newServerRole)
             ]
-        # if message.election_start:
-            # vote
-            # pass
+        if message.requestVote:
+            try:
+                if self.state.log[message.lastLogIndex].term <= message.lastLogTerm:
+                    actions = [] #no vote
+            except IndexError:
+                return [
+                    ElectionVote(message.term, self.state.name, message),
+                    StateUpdate()
+                ]
+        pass
 
         return actions
 
