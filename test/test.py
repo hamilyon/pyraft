@@ -50,7 +50,6 @@ class TestRaft(unittest.TestCase):
         actions = self.raft.receive(message)
         self.assertEqual(actions, [Nack(term=1, reply_to=message)])
 
-
     def test_follower_votes(self):
         self.raft.state.votedFor = 'second'
         self.raft.state.term = 0

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import zmq
-# print(zmq.pyzmq_version())
 import yaml
 import time
 import sys

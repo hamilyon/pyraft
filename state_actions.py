@@ -21,7 +21,7 @@ class StateUpdate(Action):
         self.votedFor = votedFor
 
     def perform(self, socket, state):
-        state.append(self.log)
+        state.extend(self.log)
         if self.commitIndex:
             state.commitIndex = self.commitIndex
         if self.serverRole:
