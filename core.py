@@ -93,6 +93,7 @@ class Raft(object):
                 except IndexError:
                     actions = self.vote(message, newTerm)  # ok, candidate's log is longer
 
+
         return actions
 
     def vote(self, message, newTerm):

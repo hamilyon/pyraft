@@ -1,7 +1,7 @@
 import unittest
 
 from core import Raft, Command
-from models import UpdateMessage, RequestVoteMessage
+from models import UpdateMessage, RequestVoteMessage, AckMessage, ElectionVoteMessage
 from state_actions import StateUpdate
 from zmq_actions import Ack, Nack, ElectionVote
 
@@ -107,6 +107,23 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [])
+
+    def test_follower_ignore_stale_acks_and_votes(self):
+        message = AckMessage(
+            messageId='spam',
+            term=1,
+            reply_to=None
+        )
+        actions = self.raft.receive(message)
+        self.assertEqual(actions, [])
+        message = ElectionVoteMessage(
+            term=1,
+            name='first',
+            reply_to=None
+        )
+        actions = self.raft.receive(message)
+        self.assertEqual(actions, [])
+
 
 
 if __name__ == '__main__':

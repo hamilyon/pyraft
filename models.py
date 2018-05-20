@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 class Message(object):
-    pass
+    def __init__(self):
+        self.ackMessage = False
+        self.update = False
+        self.requestVote = False
+        self.election_vote = False
 
 
 class AckMessage(Message):
     def __init__(self, messageId, term, reply_to):
+        super().__init__()
         self.ackMessage = True
         self.messageId = messageId
         self.term = term
@@ -14,6 +19,7 @@ class AckMessage(Message):
 
 class NackMessage(Message):
     def __init__(self, messageId, term, reply_to):
+        super().__init__()
         self.ackMessage = True
         self.messageId = messageId
         self.term = term
@@ -22,10 +28,10 @@ class NackMessage(Message):
 
 
 # log update
-class UpdateMessage(object):
+class UpdateMessage(Message):
     def __init__(self, term, prevLogIndex, prevLogTerm, entries, leaderCommit, fromLeader):
+        super().__init__()
         self.update = True
-        self.requestVote = False
         self.term = term
         self.prevLogIndex = prevLogIndex
         self.prevLogTerm = prevLogTerm
@@ -35,9 +41,9 @@ class UpdateMessage(object):
 
 
 # election start
-class RequestVoteMessage(object):
+class RequestVoteMessage(Message):
     def __init__(self, term, name, lastLogIndex, lastLogTerm):
-        self.update = False
+        super().__init__()
         self.requestVote = True
         self.term = term
         self.name = name
@@ -46,8 +52,9 @@ class RequestVoteMessage(object):
 
 
 # election vote
-class ElectionVoteMessage(object):
+class ElectionVoteMessage(Message):
     def __init__(self, term, name, reply_to):
+        super().__init__()
         self.election_vote = True
         self.term = term
         self.name = name
