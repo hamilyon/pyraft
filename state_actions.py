@@ -32,16 +32,21 @@ class StateUpdate(Action):
 
     def extend(self, log):
         term, command = self.log[0].term, self.log[0].command
-        i = len(log) - 1
-        if i < 0:
-            last_known_well = 0
-        else:
-            current_term, current_command = log[i].term, log[i].command
-            while (current_term, current_command) != (term, command):
-                i -= 1
-                if i < 0:
-                    return False
-                current = log[i]
-                current_term, current_command = current.term, current.command
-            last_known_well = i
+        last_known_well = find_log_matches(term, command, log)
+        if last_known_well is False:
+            return
         log[:] = log[:last_known_well] + self.log
+
+# def find_log_matches(term, command, log):
+#     last_known_well = len(log) - 1
+#     if last_known_well < 0:
+#         return 0
+#
+#     current_term, current_command = log[last_known_well].term, log[last_known_well].command
+#     while (current_term, current_command) != (term, command):
+#         last_known_well -= 1
+#         if last_known_well < 0:
+#             return False
+#         current = log[last_known_well]
+#         current_term, current_command = current.term, current.command
+#     return last_known_well

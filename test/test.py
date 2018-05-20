@@ -124,12 +124,13 @@ class TestRaft(unittest.TestCase):
         actions = self.raft.receive(message)
         self.assertEqual(actions, [])
 
-    def test_append_command_appends_with_deletion(self):
+    def test_answers_negative_when_log_desnt_match(self):
         action = StateUpdate(log=[Command('w', 1), Command('y', 2), Command('q', 2)])
         action.perform(None, self.raft.state)
-        action = StateUpdate(log=[Command('y', 2), Command('z', 3)])
-        action.perform(None, self.raft.state)
-        self.assertEqual(self.raft.state.log, [Command('w', 1), Command('y', 2), Command('z', 3)])
+        message = UpdateMessage(prevLogIndex=2, prevLogTerm=3, entries=[Command('q', 3), Command('z', 3)])
+        answer = self.raft.receive(message)
+        self.assertEqual(answer.__class__, Nack)
+        self.assertEqual(self.raft.state.log, [Command('w', 1), Command('y', 2), Command('q', 2)])
 
 if __name__ == '__main__':
     unittest.main()
