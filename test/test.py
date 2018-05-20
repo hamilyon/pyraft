@@ -124,7 +124,12 @@ class TestRaft(unittest.TestCase):
         actions = self.raft.receive(message)
         self.assertEqual(actions, [])
 
-
+    def test_append_command_appends_with_deletion(self):
+        action = StateUpdate(log=[Command('w', 1), Command('y', 2), Command('q', 2)])
+        action.perform(None, self.raft.state)
+        action = StateUpdate(log=[Command('y', 2), Command('z', 3)])
+        action.perform(None, self.raft.state)
+        self.assertEqual(self.raft.state.log, [Command('w', 1), Command('y', 2), Command('z', 3)])
 
 if __name__ == '__main__':
     unittest.main()
