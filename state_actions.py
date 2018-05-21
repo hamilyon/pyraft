@@ -14,28 +14,22 @@ class StateUpdate(Action):
 
     """
 
-    def __init__(self, log=None, commitIndex=None, serverRole=None, term=None, votedFor=None):
+    def __init__(self, log=None, commitIndex=None, serverRole=None, term=None, votedFor=None, prevLogIndex=None):
         self.log = log
         self.commitIndex = commitIndex
         self.serverRole = serverRole
         self.term = term
         self.votedFor = votedFor
+        self.prevLogIndex = prevLogIndex
 
     def perform(self, socket, state):
         if self.log:
-            self.extend(state.log)
+            state.log = state.log[:self.prevLogIndex] + self.log
 
         if self.commitIndex:
             state.commitIndex = self.commitIndex
         if self.serverRole:
             state.serverRole = self.serverRole
-
-    def extend(self, log):
-        term, command = self.log[0].term, self.log[0].command
-        last_known_well = find_log_matches(term, command, log)
-        if last_known_well is False:
-            return
-        log[:] = log[:last_known_well] + self.log
 
 # def find_log_matches(term, command, log):
 #     last_known_well = len(log) - 1

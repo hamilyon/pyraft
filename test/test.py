@@ -125,12 +125,12 @@ class TestRaft(unittest.TestCase):
         self.assertEqual(actions, [])
 
     def test_answers_negative_when_log_desnt_match(self):
-        action = StateUpdate(log=[Command('w', 1), Command('y', 2), Command('q', 2)])
-        action.perform(None, self.raft.state)
-        message = UpdateMessage(prevLogIndex=2, prevLogTerm=3, entries=[Command('q', 3), Command('z', 3)])
+        action = StateUpdate(log=[Command('w', 1), Command('y', 2), Command('q', 2)], prevLogIndex=-1)
+        # action.perform(None, self.raft.state)
+        message = UpdateMessage(term=3, leaderCommit=2, fromLeader='first', prevLogIndex=2, prevLogTerm=3, entries=[Command('q', 3), Command('z', 3)])
         answer = self.raft.receive(message)
-        self.assertEqual(answer.__class__, Nack)
-        self.assertEqual(self.raft.state.log, [Command('w', 1), Command('y', 2), Command('q', 2)])
+        self.assertEqual(answer[0].__class__, Nack)
+        self.assertEqual(self.raft.state.log, [])
 
 if __name__ == '__main__':
     unittest.main()

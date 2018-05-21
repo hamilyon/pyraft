@@ -76,9 +76,12 @@ class Raft(object):
                 return [Nack(self.state.term, message)] #no state update
             elif self.state.serverRole != 'follower':
                 newServerRole = 'follower'
+            prevLogIndex, prevLogTerm = message.prevLogIndex, message.prevLogTerm
+            if len(self.state.log)-1 < prevLogIndex:
+                return [Nack(message.term, message)]
             actions = [
                 Ack(message.term, message),
-                StateUpdate(message.entries, message.leaderCommit, newServerRole, newTerm)
+                StateUpdate(message.entries, message.leaderCommit, newServerRole, newTerm, prevLogIndex=prevLogIndex)
             ]
         if message.requestVote:
             if message.term > self.state.term:
