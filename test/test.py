@@ -14,27 +14,27 @@ class TestRaft(unittest.TestCase):
         self.raft.state.votedFor = 'second'
         message = UpdateMessage(
             term=1,
-            prevLogIndex=0,
-            prevLogTerm=0,
+            prevLogIndex=-1,
+            prevLogTerm=-1,
             entries=[Command('1', 1)],
             leaderCommit=1,
             fromLeader='second'
         )
         actions = self.raft.receive(message)
-        self.assertEqual(actions, [Ack(term=1, reply_to=message), StateUpdate([Command('1', term=1)], commitIndex=1, term=1)])
+        self.assertEqual(actions, [Ack(term=1, reply_to=message), StateUpdate([Command('1', term=1)], commitIndex=1, term=1, prevLogIndex=-1)])
 
     def test_new_term_follower_update(self):
         self.raft.state.votedFor = 'second'
         message = UpdateMessage(
             term=2,
-            prevLogIndex=0,
-            prevLogTerm=0,
+            prevLogIndex=-1,
+            prevLogTerm=-1,
             entries=[Command('1', 1)],
             leaderCommit=1,
             fromLeader='second'
         )
         actions = self.raft.receive(message)
-        self.assertEqual(actions, [Ack(term=2, reply_to=message), StateUpdate([Command('1', term=1)], commitIndex=1, term=2)])
+        self.assertEqual(actions, [Ack(term=2, reply_to=message), StateUpdate([Command('1', term=1)], commitIndex=1, term=2, prevLogIndex=-1)])
 
     def test_old_term_follower_ignore(self):
         self.raft.state.votedFor = 'second'

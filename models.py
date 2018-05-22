@@ -6,6 +6,9 @@ class Message(object):
         self.requestVote = False
         self.election_vote = False
 
+    def __repr__(self):
+        return str(self.__class__.__name__) + '(' + str(self.__dict__) + ')'
+
 
 class AckMessage(Message):
     def __init__(self, messageId, term, reply_to):

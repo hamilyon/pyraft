@@ -7,6 +7,8 @@ class Action(object):
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
 
+    def __repr__(self):
+        return str(self.__class__.__name__) + '(' + str(self.__dict__) + ')'
 
 class StateUpdate(Action):
     """

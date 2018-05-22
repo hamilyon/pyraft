@@ -53,6 +53,9 @@ class Command(object):
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
 
+    def __repr__(self):
+        return str(self.__class__.__name__) + '(' + str(self.__dict__) + ')'
+
 
 class Raft(object):
     def __init__(self, server_name, state=None):
