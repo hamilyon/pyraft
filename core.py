@@ -67,58 +67,35 @@ class Raft(object):
     # returns list of actions
     def receive(self, message):
         term = message.term
-        #update term
-        newTerm = None
-        if self.state.term < term:
-            newTerm = term
+        #TODO
+        # newTerm = None
+        # newServerRole = None
+        # if self.state.term < term:
+        #     newTerm = term
+        #     if self.state.serverRole != 'follower':
+        #         newServerRole = 'follower'
 
-        actions = []
-        if message.update:
-            newServerRole = None
-            if self.state.term > term:
-                return [Nack(self.state.term, message)] #no state update
-            elif self.state.serverRole != 'follower':
-                newServerRole = 'follower'
-            prevLogIndex, prevLogTerm = message.prevLogIndex, message.prevLogTerm
-            if len(self.state.log)-1 < prevLogIndex:
-                return [Nack(message.term, message)]
-            actions = [
-                Ack(message.term, message),
-                StateUpdate(message.entries, message.leaderCommit, newServerRole, newTerm, prevLogIndex=prevLogIndex)
-            ]
-        if message.requestVote:
-            if message.term > self.state.term:
-                try:
-                    if message.lastLogIndex == -1 and message.lastLogTerm == -1 and not self.state.log:
-                        # log is empty, vote
-                        actions = self.vote(message, newTerm)
-                    elif self.state.log[message.lastLogIndex].term >= message.lastLogTerm:
-                        actions = self.vote(message, newTerm)
-                    else:
-                        actions = [] #no vote
-                except IndexError:
-                    actions = self.vote(message, newTerm)  # ok, candidate's log is longer
-
-
+        actions = self.dispach_by_type(message)
         return actions
 
-    def vote(self, message, newTerm):
-        return [
-            ElectionVote(message.term, message.name, message),
-            StateUpdate(term=newTerm, votedFor=message.name)
+    def vote(self, message, newTerm, voteGranted):
+        actions = [
+            ElectionVote(message.term, self.state.name, voteGranted, message,),
         ]
+        if voteGranted:
+            actions.append(StateUpdate(term=newTerm, votedFor=message.name))
+        return actions
 
-    def act_upon(self, message):
+    def act_upon(self, message, socket):
         actions = self.receive(message)
         for action in actions:
-            action.perform()
+            action.perform(socket, self.state)
 
     def run(self):
         poller = zmq.Poller()
         for socket in self.sockets:
             poller.register(socket, zmq.POLLIN)
 
-        # Work on requests from both server and publisher
         should_continue = True
         while should_continue:
             socks = dict(poller.poll())
@@ -127,8 +104,58 @@ class Raft(object):
                     message = peer_socket.recv()
                     message = pickle.loads(message)
                     print("Recieved command: %s" % message)
-                    self.act_upon(message)
+                    self.act_upon(message, socket)
 
+    def dispach_by_type(self, message):
+        if message.update:
+            return self.appendEntriesRpc(message)
+        if message.requestVote:
+            return self.requestVoteRpc(message)
+        return []
+
+    def appendEntriesRpc(self, message):
+        term = message.term
+        newTerm = max(self.state.term, message.term)
+
+        #TODO move server role to upper function
+        newServerRole = None
+
+        if self.state.term < term:
+            newTerm = term
+            if self.state.serverRole != 'follower':
+                newServerRole = 'follower'
+
+        if self.state.term > term:
+            return [Nack(self.state.term, message)] #no state update
+        prevLogIndex, prevLogTerm = message.prevLogIndex, message.prevLogTerm
+        if len(self.state.log)-1 < prevLogIndex:
+            return [Nack(message.term, message)]
+        if (message.prevLogIndex == -1 and message.prevLogTerm == -1 and not self.state.log) \
+                or self.state.log[prevLogIndex].term == prevLogTerm:
+            return [
+                Ack(message.term, message),
+                StateUpdate(message.entries, message.leaderCommit, newServerRole, newTerm, prevLogIndex=prevLogIndex)
+            ]
+        else:
+            return [Nack(message.term, message)]
+
+    def requestVoteRpc(self, message):
+        newTerm = max(self.state.term, message.term)
+        if message.term < self.state.term:
+            return self.vote(message, newTerm, False)
+        if message.term > self.state.term or message.name == self.state.votedFor:
+            try:
+                if message.lastLogIndex == -1 and message.lastLogTerm == -1 and not self.state.log:
+                    # log is empty, vote
+                    return self.vote(message, newTerm, True)
+                elif self.state.log[message.lastLogIndex].term >= message.lastLogTerm:
+                    return self.vote(message, newTerm, True)
+                else:
+                    return self.vote(message, newTerm, False) #negative
+            except IndexError:
+                return self.vote(message, newTerm, True)  # ok, candidate's log is longer
+        else:
+            return self.vote(message, newTerm, False) #negative
 
 class RaftPeer(Raft):
     def __init__(self, server_name, config, context, state=None):

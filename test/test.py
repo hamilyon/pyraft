@@ -1,7 +1,7 @@
 import unittest
 
 from core import Raft, Command
-from models import UpdateMessage, RequestVoteMessage, AckMessage, ElectionVoteMessage
+from messages import UpdateMessage, RequestVoteMessage, AckMessage, ElectionVoteMessage
 from state_actions import StateUpdate
 from zmq_actions import Ack, Nack, ElectionVote
 
@@ -61,7 +61,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message),
+            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
@@ -76,7 +76,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message),
+            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
@@ -92,7 +92,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message),
+            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
@@ -106,7 +106,7 @@ class TestRaft(unittest.TestCase):
             lastLogTerm=0,
         )
         actions = self.raft.receive(message)
-        self.assertEqual(actions, [])
+        self.assertEqual(actions, [ElectionVote(term=1, name='first', voteGranted=False, reply_to=message)])
 
     def test_follower_ignore_stale_acks_and_votes(self):
         message = AckMessage(
@@ -119,6 +119,7 @@ class TestRaft(unittest.TestCase):
         message = ElectionVoteMessage(
             term=1,
             name='first',
+            voteGranted=True,
             reply_to=None
         )
         actions = self.raft.receive(message)

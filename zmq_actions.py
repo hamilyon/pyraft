@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from models import AckMessage, ElectionVoteMessage, NackMessage
+from messages import AckMessage, ElectionVoteMessage, NackMessage
 
 
 class Action(object):  # zeroMq specific
@@ -45,11 +45,12 @@ class Nack(Action):
 
 # election vote
 class ElectionVote(Action):
-    """Действие - голос 'за'"""
-    def __init__(self, term, name, reply_to):
+    """Действие - голос 'за' или 'против'"""
+    def __init__(self, term, name, voteGranted, reply_to):
         self.term = term
         self.name = name
+        self.voteGranted = voteGranted
         self.reply_to = reply_to
 
     def perform(self, socket, state):
-        self.send(socket, ElectionVoteMessage(self.term, self.name, self.reply_to))
+        self.send(socket, ElectionVoteMessage(self.term, self.name, self.voteGranted, self.reply_to))

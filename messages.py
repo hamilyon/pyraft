@@ -56,10 +56,10 @@ class RequestVoteMessage(Message):
 
 # election vote
 class ElectionVoteMessage(Message):
-    def __init__(self, term, name, reply_to):
+    def __init__(self, term, name, voteGranted, reply_to):
         super().__init__()
         self.election_vote = True
         self.term = term
         self.name = name
-        self.voteGranted = True
+        self.voteGranted = voteGranted
         self.reply_to = reply_to
