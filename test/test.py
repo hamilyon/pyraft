@@ -61,7 +61,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
+            ElectionVote(name='first', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
@@ -76,7 +76,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
+            ElectionVote(name='first', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
@@ -92,7 +92,7 @@ class TestRaft(unittest.TestCase):
         )
         actions = self.raft.receive(message)
         self.assertEqual(actions, [
-            ElectionVote(name='third', term=1, reply_to=message, voteGranted=True),
+            ElectionVote(name='first', term=1, reply_to=message, voteGranted=True),
             StateUpdate(votedFor='third', term=1)
         ])
 
