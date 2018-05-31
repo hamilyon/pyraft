@@ -91,21 +91,6 @@ class Raft(object):
         for action in actions:
             action.perform(socket, self.state)
 
-    def run(self):
-        poller = zmq.Poller()
-        for socket in self.sockets:
-            poller.register(socket, zmq.POLLIN)
-
-        should_continue = True
-        while should_continue:
-            socks = dict(poller.poll())
-            for peer_socket in socks:
-                if (socks[peer_socket] == zmq.POLLIN):
-                    message = peer_socket.recv()
-                    message = pickle.loads(message)
-                    print("Recieved command: %s" % message)
-                    self.act_upon(message, socket)
-
     def dispach_by_type(self, message):
         if message.update:
             return self.appendEntriesRpc(message)
@@ -157,6 +142,7 @@ class Raft(object):
         else:
             return self.vote(message, newTerm, False) #negative
 
+
 class RaftPeer(Raft):
     def __init__(self, server_name, config, context, state=None):
         super().__init__(server_name, state)
@@ -166,10 +152,27 @@ class RaftPeer(Raft):
             server_netloc = config['servers'][name]
             if name != server_name:
                 print("Connecting to " + name + " server " + server_netloc)
-                socket = context.context.socket(zmq.REQ)
+                socket = context.socket(zmq.REQ)
                 socket.connect("tcp://" + server_netloc)
-                self.sockets['name'] = socket
+                self.sockets[name] = socket
         self.context = context
+
+    def run(self):
+        poller = zmq.Poller()
+        for name, socket in self.sockets.items():
+            print('regfistering with poller', socket)
+            poller.register(socket, zmq.POLLIN)
+
+        should_continue = True
+        while should_continue:
+            socks = dict(poller.poll())
+            for peer_socket in socks:
+                if (socks[peer_socket] == zmq.POLLIN):
+                    message = peer_socket.recv()
+                    message = pickle.loads(message)
+                    print("Recieved command: %s" % message)
+                    self.act_upon(message, socket)
+
 
 def run_peer():
     context = zeromq_context.context
@@ -181,8 +184,29 @@ def run_peer():
     peer(server_name, config, context)
 
 
+class ClientUpdate(object):
+    def __init__(self, log):
+        self.log = log
+
+
+def run_client_emulation_thread(config):
+    context = zeromq_context.context
+    socket = context.socket(zmq.REQ)
+    socket.connect("tcp://" + config['first'])
+    socket.send_pyobj(ClientUpdate(['1']))
+    answer = socket.recv_pyobj()
+    print(answer)
+
+
+
 def peer(server_name, config, context):
     server_netloc = config['servers'][server_name]
     raft_server = RaftPeer(server_name, config, context)
+    # hardcode test stuff
+    if sys.argv[1] == 'first':
+        run_client_emulation_thread(config)
+    raft_server.run()
 
 
+if __name__ == '__main__':
+    run_peer()

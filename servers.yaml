@@ -1,4 +1,4 @@
 servers:
-  c1: localhost:5151
-  c2: localhost:5152
-  c3: localhost:5153
+  first: localhost:5151
+  second: localhost:5152
+  third: localhost:5153
