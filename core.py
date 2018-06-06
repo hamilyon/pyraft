@@ -8,11 +8,14 @@
 
 import pickle
 import sys
+import threading
 
+import time
 import yaml
 import zmq
 
 import zeromq_context
+from messages import ClientUpdate
 from state_actions import StateUpdate
 from zmq_actions import Ack, Nack, ElectionVote
 
@@ -66,7 +69,7 @@ class Raft(object):
 
     # returns list of actions
     def receive(self, message):
-        term = message.term
+        # term = message.term
         #TODO
         # newTerm = None
         # newServerRole = None
@@ -155,6 +158,11 @@ class RaftPeer(Raft):
                 socket = context.socket(zmq.REQ)
                 socket.connect("tcp://" + server_netloc)
                 self.sockets[name] = socket
+            else:
+                socket = context.socket(zmq.REP)
+                socket.bind("tcp://" + server_netloc)
+                self.sockets[name] = socket
+
         self.context = context
 
     def run(self):
@@ -184,28 +192,42 @@ def run_peer():
     peer(server_name, config, context)
 
 
-class ClientUpdate(object):
-    def __init__(self, log):
-        self.log = log
-
-
 def run_client_emulation_thread(config):
+    server_name = sys.argv[1]
+    print(server_name)
+    threading.Thread(None, client_emulation, None, [config]).start()
+
+
+def client_emulation(config):
+    # hack to wait for to server is up
+    time.sleep(0.8)
+
     context = zeromq_context.context
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://" + config['first'])
-    socket.send_pyobj(ClientUpdate(['1']))
-    answer = socket.recv_pyobj()
-    print(answer)
+    print(config)
+    socket.connect("tcp://" + config['servers']['first'])
+    for i in range(10):
+        socket.send_pyobj(ClientUpdate([str(i)]))
+        answer = socket.recv_pyobj()
+        print(answer)
+        print(server.state.log)
 
+
+server = None
 
 
 def peer(server_name, config, context):
+    print(config, type(config))
     server_netloc = config['servers'][server_name]
     raft_server = RaftPeer(server_name, config, context)
     # hardcode test stuff
+    global server
+    server = raft_server
     if sys.argv[1] == 'first':
         run_client_emulation_thread(config)
+
     raft_server.run()
+
 
 
 if __name__ == '__main__':

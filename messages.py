@@ -5,6 +5,7 @@ class Message(object):
         self.update = False
         self.requestVote = False
         self.election_vote = False
+        self.client_update = False
 
     def __repr__(self):
         return str(self.__class__.__name__) + '(' + str(self.__dict__) + ')'
@@ -63,3 +64,11 @@ class ElectionVoteMessage(Message):
         self.name = name
         self.voteGranted = voteGranted
         self.reply_to = reply_to
+
+
+
+class ClientUpdate(Message):
+    def __init__(self, log):
+        super().__init__()
+        self.log = log
+
