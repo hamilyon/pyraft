@@ -66,9 +66,9 @@ class ElectionVoteMessage(Message):
         self.reply_to = reply_to
 
 
-
 class ClientUpdate(Message):
     def __init__(self, log):
         super().__init__()
+        self.client_update = True
         self.log = log
 

@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """
 Основные структуры данных и чистые функции, реализующие raft (https://raft.github.io/raft.pdf)
 ввод-вывод, запись состояния на диск и даже просто изменение состояния должны быть реализованы где-то ещё
 """
 
 import pickle
-import sys
-import threading
 
-import time
-import yaml
 import zmq
 
-import zeromq_context
-from messages import ClientUpdate
 from state_actions import StateUpdate
-from zmq_actions import Ack, Nack, ElectionVote
+from zmq_actions import Ack, Nack, ElectionVote, BroadcastUpdate
 
 
 class RaftState(object):
+    """
+    состояние участника raft
+    """
     def __init__(self, name):
         self.term = 0 # current term, increases monotonically
         self.serverRole = 'follower' # 'leader', 'candidate', 'follower'
@@ -61,6 +57,10 @@ class Command(object):
 
 
 class Raft(object):
+    """
+    реализация алгоритма участника raft
+    входная точка - метод act_upon
+    """
     def __init__(self, server_name, state=None):
         if not state:
             self.state = RaftState(server_name)
@@ -89,16 +89,18 @@ class Raft(object):
             actions.append(StateUpdate(term=newTerm, votedFor=message.name))
         return actions
 
-    def act_upon(self, message, socket):
+    def act_upon(self, message, socket, sockets):
         actions = self.receive(message)
         for action in actions:
-            action.perform(socket, self.state)
+            action.perform(socket, sockets, self.state)
 
     def dispach_by_type(self, message):
         if message.update:
             return self.appendEntriesRpc(message)
         if message.requestVote:
             return self.requestVoteRpc(message)
+        if message.client_update:
+            return self.clientUpdate(message)
         return []
 
     def appendEntriesRpc(self, message):
@@ -145,8 +147,21 @@ class Raft(object):
         else:
             return self.vote(message, newTerm, False) #negative
 
+    def clientUpdate(self, message):
+        return [
+            StateUpdate(message.log),
+            BroadcastUpdate(self.state.term,
+                                self.state.log + message.log, # e.g. e new log
+                                self.state.serverStates,
+                                self.state.commitIndex,
+                                self.state.name
+                                )]
+
 
 class RaftPeer(Raft):
+    """
+    Простая реализация сетевого кода для участника raft
+    """
     def __init__(self, server_name, config, context, state=None):
         super().__init__(server_name, state)
         self.config = config
@@ -180,55 +195,3 @@ class RaftPeer(Raft):
                     message = pickle.loads(message)
                     print("Recieved command: %s" % message)
                     self.act_upon(message, socket)
-
-
-def run_peer():
-    context = zeromq_context.context
-    server_name = sys.argv[1]
-
-    with open("servers.yaml", 'r') as stream:
-        config = yaml.load(stream)
-
-    peer(server_name, config, context)
-
-
-def run_client_emulation_thread(config):
-    server_name = sys.argv[1]
-    print(server_name)
-    threading.Thread(None, client_emulation, None, [config]).start()
-
-
-def client_emulation(config):
-    # hack to wait for to server is up
-    time.sleep(0.8)
-
-    context = zeromq_context.context
-    socket = context.socket(zmq.REQ)
-    print(config)
-    socket.connect("tcp://" + config['servers']['first'])
-    for i in range(10):
-        socket.send_pyobj(ClientUpdate([str(i)]))
-        answer = socket.recv_pyobj()
-        print(answer)
-        print(server.state.log)
-
-
-server = None
-
-
-def peer(server_name, config, context):
-    print(config, type(config))
-    server_netloc = config['servers'][server_name]
-    raft_server = RaftPeer(server_name, config, context)
-    # hardcode test stuff
-    global server
-    server = raft_server
-    if sys.argv[1] == 'first':
-        run_client_emulation_thread(config)
-
-    raft_server.run()
-
-
-
-if __name__ == '__main__':
-    run_peer()

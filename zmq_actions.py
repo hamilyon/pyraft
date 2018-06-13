@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from messages import AckMessage, ElectionVoteMessage, NackMessage
+from messages import AckMessage, ElectionVoteMessage, NackMessage, UpdateMessage
 
 
 class Action(object):  # zeroMq specific
@@ -22,14 +22,30 @@ class Action(object):  # zeroMq specific
 
 class Ack(Action):
     """Действие - подтверждение"""
-    def __init__(self,
-                 term, reply_to):
+    def __init__(self, term, reply_to):
         self.ackMessage = True
         self.term = term
         self.reply_to = reply_to
 
-    def perform(self, socket, state):
+    def perform(self, socket, sockets, state):
         self.send(socket, AckMessage(self.reply_to.messageId, self.term, self.reply_to))
+
+
+class BroadcastUpdate(Action):
+    """Действие - подтверждение"""
+    def __init__(self, term, log, serverStates, leaderCommit, fromLeader):
+        self.term = term
+        self.log = log
+        self.serverStates = serverStates
+        self.leaderCommit = leaderCommit
+        self.fromLeader = fromLeader
+
+    def perform(self, socket, sockets, state):
+        for s in sockets.items():
+            self.send(socket, UpdateMessage(
+                self.term, self.prevLogIndex, self.prevLogTerm, self.entries,
+                self.leaderCommit, self.fromLeader)
+            )
 
 
 class Nack(Action):
@@ -39,7 +55,7 @@ class Nack(Action):
         self.term = term
         self.reply_to = reply_to
 
-    def perform(self, socket, state):
+    def perform(self, socket, sockets, state):
         self.send(socket, NackMessage(self.reply_to.messageId, self.term, self.reply_to))
 
 
@@ -52,5 +68,5 @@ class ElectionVote(Action):
         self.voteGranted = voteGranted
         self.reply_to = reply_to
 
-    def perform(self, socket, state):
+    def perform(self, socket, sockets, state):
         self.send(socket, ElectionVoteMessage(self.term, self.name, self.voteGranted, self.reply_to))
